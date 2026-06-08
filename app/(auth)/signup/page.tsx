@@ -9,6 +9,7 @@ type FieldErrors = {
     username?: string;
     display_name?: string;
     password?: string;
+    password_confirm?: string;
     email?: string;
 };
 
@@ -17,13 +18,17 @@ export default function SignupPage() {
     const [username, setUsername] = useState("");
     const [displayName, setDisplayName] = useState("");
     const [password, setPassword] = useState("");
+    const [passwordConfirm, setPasswordConfirm] = useState("");
     const [email, setEmail] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState("");
     const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
     const [isLoading, setIsLoading] = useState(false);
 
-    // クライアントサイドのバリデーション
+    function clearFieldError(field: keyof FieldErrors) {
+        setFieldErrors((prev) => ({ ...prev, [field]: undefined }));
+    }
+
     function validate(): boolean {
         const errors: FieldErrors = {};
 
@@ -35,6 +40,9 @@ export default function SignupPage() {
         }
         if (password.length < 8) {
             errors.password = "8文字以上で入力してください。";
+        }
+        if (password !== passwordConfirm) {
+            errors.password_confirm = "パスワードが一致しません。";
         }
         if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
             errors.email = "有効なメールアドレスを入力してください。";
@@ -71,7 +79,6 @@ export default function SignupPage() {
                 return;
             }
 
-            // サインアップ成功 → チャットページへ
             router.push("/chat");
             router.refresh();
         } catch {
@@ -110,10 +117,7 @@ export default function SignupPage() {
                         <input
                             type="text"
                             value={username}
-                            onChange={(e) => {
-                                setUsername(e.target.value);
-                                if (fieldErrors.username) setFieldErrors((prev) => ({ ...prev, username: undefined }));
-                            }}
+                            onChange={(e) => { setUsername(e.target.value); clearFieldError("username"); }}
                             placeholder="例: haruto123"
                             required
                             autoComplete="username"
@@ -136,10 +140,7 @@ export default function SignupPage() {
                         <input
                             type="text"
                             value={displayName}
-                            onChange={(e) => {
-                                setDisplayName(e.target.value);
-                                if (fieldErrors.display_name) setFieldErrors((prev) => ({ ...prev, display_name: undefined }));
-                            }}
+                            onChange={(e) => { setDisplayName(e.target.value); clearFieldError("display_name"); }}
                             placeholder="例: ハルト"
                             required
                             autoComplete="name"
@@ -163,10 +164,7 @@ export default function SignupPage() {
                             <input
                                 type={showPassword ? "text" : "password"}
                                 value={password}
-                                onChange={(e) => {
-                                    setPassword(e.target.value);
-                                    if (fieldErrors.password) setFieldErrors((prev) => ({ ...prev, password: undefined }));
-                                }}
+                                onChange={(e) => { setPassword(e.target.value); clearFieldError("password"); }}
                                 placeholder="パスワードを入力"
                                 required
                                 autoComplete="new-password"
@@ -186,6 +184,26 @@ export default function SignupPage() {
                         )}
                     </div>
 
+                    {/* パスワード確認 */}
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                            パスワード確認
+                        </label>
+                        <input
+                            type={showPassword ? "text" : "password"}
+                            value={passwordConfirm}
+                            onChange={(e) => { setPasswordConfirm(e.target.value); clearFieldError("password_confirm"); }}
+                            placeholder="もう一度入力"
+                            required
+                            autoComplete="new-password"
+                            className={`w-full rounded-lg border px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition ${fieldErrors.password_confirm ? "border-red-300 bg-red-50" : "border-slate-200 bg-white"
+                                }`}
+                        />
+                        {fieldErrors.password_confirm && (
+                            <p className="mt-1 text-xs text-red-500">{fieldErrors.password_confirm}</p>
+                        )}
+                    </div>
+
                     {/* メールアドレス（任意） */}
                     <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1.5">
@@ -197,10 +215,7 @@ export default function SignupPage() {
                         <input
                             type="email"
                             value={email}
-                            onChange={(e) => {
-                                setEmail(e.target.value);
-                                if (fieldErrors.email) setFieldErrors((prev) => ({ ...prev, email: undefined }));
-                            }}
+                            onChange={(e) => { setEmail(e.target.value); clearFieldError("email"); }}
                             placeholder="email@example.com"
                             autoComplete="email"
                             className={`w-full rounded-lg border px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition ${fieldErrors.email ? "border-red-300 bg-red-50" : "border-slate-200 bg-white"
@@ -235,10 +250,7 @@ export default function SignupPage() {
             {/* ログインリンク */}
             <p className="mt-5 text-center text-sm text-slate-500">
                 すでにアカウントをお持ちの方は{" "}
-                <Link
-                    href="/login"
-                    className="text-teal-600 font-medium hover:underline"
-                >
+                <Link href="/login" className="text-teal-600 font-medium hover:underline">
                     ログイン
                 </Link>
             </p>

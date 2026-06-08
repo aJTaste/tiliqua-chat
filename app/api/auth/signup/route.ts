@@ -61,40 +61,53 @@ export async function POST(request: NextRequest) {
         );
     }
 
-    // --- Supabase Auth へのサインアップ ---
+    // --- 認証用メールアドレスの決定 ---
     // メールアドレスが未入力の場合は内部用メールを生成する
     // （Supabase Authはメールアドレスなしでのサインアップをサポートしていないため）
     const authEmail =
-        email && email.trim() ? email.trim() : `${username}@tiliqua.internal`;
+        email && email.trim() ? email.trim() : `${username}@tiliqua.app`;
 
-    const supabase = await createClient();
-    const { data, error } = await supabase.auth.signUp({
+    // --- Supabase Auth へのユーザー作成 ---
+    // admin.createUser() を使用することでメールドメイン検証をバイパスする
+    // （supabase.auth.signUp() はドメインのMXレコードを確認するため内部メールが弾かれる）
+    const { error: createError } = await adminClient.auth.admin.createUser({
         email: authEmail,
         password,
-        options: {
-            // このメタデータは on_auth_user_created トリガーが読み取り、
-            // profiles レコードの作成に使用する
-            data: {
-                username,
-                display_name: display_name.trim(),
-            },
+        user_metadata: {
+            username,
+            display_name: display_name.trim(),
         },
+        email_confirm: true, // メール確認を不要にする
     });
 
-    if (error) {
-        // メールアドレス重複
+    if (createError) {
         if (
-            error.message.includes("already registered") ||
-            error.code === "user_already_exists"
+            createError.message.includes("already registered") ||
+            createError.code === "email_exists"
         ) {
             return NextResponse.json(
-                { error: { code: "VALIDATION_ERROR", message: "このメールアドレスはすでに登録されています。" } },
+                { error: { code: "VALIDATION_ERROR", message: "このユーザーIDまたはメールアドレスはすでに登録されています。" } },
                 { status: 422 }
             );
         }
-        console.error("[signup] Supabase error:", error);
+        console.error("[signup] Admin error:", createError);
         return NextResponse.json(
             { error: { code: "INTERNAL_ERROR", message: "アカウント作成に失敗しました。しばらく待ってから再度お試しください。" } },
+            { status: 500 }
+        );
+    }
+
+    // ユーザー作成後、すぐにサインインしてセッションを作成する
+    const supabase = await createClient();
+    const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email: authEmail,
+        password,
+    });
+
+    if (signInError) {
+        console.error("[signup] Sign in after creation error:", signInError);
+        return NextResponse.json(
+            { error: { code: "INTERNAL_ERROR", message: "アカウントは作成されましたが、ログインに失敗しました。ログインページからお試しください。" } },
             { status: 500 }
         );
     }

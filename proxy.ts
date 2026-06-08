@@ -1,10 +1,10 @@
-// middleware.ts
+// proxy.ts
 // すべてのリクエストに対してSupabaseのセッションを更新し、
 // 未認証ユーザーを保護されたルートからリダイレクトする。
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
     // レスポンスを初期化する。setAll でクッキーを更新するため let で定義。
     let supabaseResponse = NextResponse.next({
         request,
